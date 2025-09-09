@@ -1,0 +1,75 @@
+name: CI/CD on new tag
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+jobs:
+  build_firmware:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        environment: [standard, standard-rc] # <-- Add your environments here
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install PlatformIO
+        run: pip install -U platformio
+
+      - name: Build PlatformIO project for ${{ matrix.environment }}
+        run: pio run -e ${{ matrix.environment }}
+
+      - name: Combine binaries for esp-web-tools - ${{ matrix.environment }}
+        run: |
+          python combine_bins.py ${{ matrix.environment }}
+
+      - name: Delete old ${{ matrix.environment }} firmware
+        run: rm -rf docs/firmware/${{ matrix.environment }}.bin
+
+      - name: Rename firmware for ${{ matrix.environment }}
+        run: mv .pio/build/${{ matrix.environment }}/${{ matrix.environment }}.bin docs/firmware/
+
+      - name: Rename and upload firmware as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.environment }}.bin
+          path: docs/firmware/${{ matrix.environment }}.bin
+
+  commit_firmware:
+    runs-on: ubuntu-latest
+    needs: build_firmware # This job runs only after build_firmware is complete
+    permissions:
+      contents: write
+
+    steps:
+      - name: ⬇️ Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # This is essential for the commit action
+          fetch-depth: 0
+
+      - name: Download all firmware artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: docs/firmware # All artifacts will be downloaded into this directory
+
+      - name: Commit and push changes
+        uses: stefanzweifel/git-auto-commit-action@v6
+        with:
+          commit_message: "Automated: Update firmware binaries"
+          branch: ${{ github.ref_name }}
+          # Only commit the files in this specific subdirectory
+          file_pattern: docs/firmware/
+          
