@@ -1,8 +1,8 @@
 # Precompiled Binaries
 
-There are a set of precompiled binaries available on the github repo that have some different colour schemes. You can use the web installer here:
+There are a set of precompiled binaries available on the github repo that have some different colour schemes, etc. You can use the web installer here:
 
-[Web Installer](https://dpoulson.github.io/Chopperpixels/)
+[Web Installer](https://dpoulson.github.io/ChopperPixels/)
 
 This will allow you to flash any of the firmwares to your lights. A Chrome based browser is required (chrome, chromium, brave, etc.)
 
