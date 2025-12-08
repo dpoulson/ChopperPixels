@@ -7,8 +7,6 @@
 
 #define DEBUG 0
 
-#define EEPROM_SIZE 16
-
 const int I2C_ADDR = 0x08;
 
 #define LADD_PIN 15        // Output pin for led board
@@ -39,14 +37,27 @@ float bkbrightness = 5;
 int colour_index = 0;
 int scannerpos = HEIGHT-LARSON_HEIGHT;
 int scannerdir = 1;
-bool rx_connected = true;
 long int last_loop = 0;
-long int last_check = 0;
+bool rc_init_state = false;
+static unsigned long rc_init_debounce = 0;
+const unsigned int debounceDelay = 200; // Debounce delay in milliseconds
+
 
 volatile bool i2cCommandReady = false;
 int serialBufferIndex = 0;
 const int MAX_COMMAND_LENGTH = 32;
 char CommandBuffer[MAX_COMMAND_LENGTH];
+
+struct Settings {
+  int speed;
+  int brightness;
+  float bkbrightness;
+  int colour_index;
+};
+
+Settings currentSettings;
+
+#define EEPROM_SIZE sizeof(Settings) 
 
 
 void receiveEvent(int byteCount) {
@@ -132,20 +143,31 @@ void setup() {
   EEPROM.begin(EEPROM_SIZE);
   pinMode(RC_PIN, INPUT_PULLUP);
   last_loop = millis();
-
-  speed = map(analogRead(25), 0, 890, 100, 0);
-  brightness = map(analogRead(26), 0, 890, 100, 0);
-  if (digitalRead(RC_PIN) == LOW) { // RC Pin is jumpered, so read from EEPROM
-    Serial.println("Loading defaults from EEPROM");
-    speed = EEPROM.readInt(0);
-    brightness = EEPROM.readInt(4);
-    colour_index = EEPROM.readInt(8);
-  }
   
+  if (digitalRead(RC_PIN) == HIGH) { // RC Pin is jumpered, so read from EEPROM
+    Serial.println("Loading defaults from EEPROM");
+    // Read the entire struct at address 0
+    EEPROM.get(0, currentSettings); 
+    rc_init_state = true;
+    // Now load the structure values into your global variables
+    speed = currentSettings.speed;
+    brightness = currentSettings.brightness;
+    bkbrightness = currentSettings.bkbrightness;
+    colour_index = currentSettings.colour_index;
+    rc_init_state = true;
+  } else {
+    speed = map(analogRead(25), 0, 4096, 100, 0);
+    brightness = map(analogRead(26), 0, 4096, 100, 0);
+    bkbrightness = map(analogRead(27), 0, 4096, 100, 1);
+    rc_init_state = false;
+  }
+
   Serial.print("Speed: ");
   Serial.println(speed);
   Serial.print("Brightness: ");
   Serial.println(brightness); 
+  Serial.print("Back Brightness: ");
+  Serial.println(bkbrightness); 
   Serial.print("Colour Index: ");
   Serial.println(colour_index);
 
@@ -154,37 +176,74 @@ void setup() {
 
 }
 
+void saveSettings() {
+  Serial.println("Saving settings....");
+  currentSettings.speed = speed;
+  currentSettings.brightness = brightness;
+  currentSettings.bkbrightness = bkbrightness;
+  currentSettings.colour_index = colour_index;
+  
+  // 2. Write the entire struct to address 0
+  EEPROM.put(0, currentSettings); 
+  EEPROM.commit();
+
+  Serial.print("Speed: ");
+  Serial.print(speed);
+
+  Serial.print(" brightness: ");
+  Serial.print(brightness);
+
+  Serial.print(" bkbrightness: ");
+  Serial.print(bkbrightness);
+  
+  Serial.print(" colour_index: ");
+  Serial.print(colour_index);
+
+  Serial.println("....Done");
+}
+
 void loop() {
-  Serial.println(digitalRead(RC_PIN));
+
+  #if DEBUG == 1
+    Serial.print(digitalRead(RC_PIN));
+    Serial.print(", ");
+    //Serial.print(millis());
+    //Serial.print(", ");
+    Serial.print(last_loop);
+    Serial.print(", ");
+    Serial.print(speed);
+    Serial.print(", ");
+    Serial.print(brightness);
+    Serial.print(", ");
+    Serial.print(bkbrightness);
+    Serial.print(", ");
+    Serial.print(analogRead(25));
+    Serial.print(", ");
+    Serial.print(int(colours[colour_index][0]/(bkbrightness)));    
+    Serial.println();
+  #endif
+
   // Main LED panel loop
   if (millis() > last_loop + speed) {
-    
-    if (digitalRead(RC_PIN) == HIGH) { // RC PIN not jumpered, so read from trim pots
-      Serial.println("Reading values from trim pots");
+
+    if (digitalRead(RC_PIN) == LOW) { // RC PIN not jumpered, so read from trim pots
       speed = map(analogRead(25), 0, 4096, 100, 0);
       brightness = map(analogRead(26), 0, 4096, 100, 0);
       bkbrightness = map(analogRead(27), 0, 4096, 100, 1);
     }
-
-    #if DEBUG == 1
-      Serial.print(speed);
-      Serial.print(", ");
-      Serial.print(brightness);
-      Serial.print(", ");
-      Serial.print(bkbrightness);
-      Serial.print(", ");
-      Serial.print(analogRead(25));
-      Serial.print(", ");
-      Serial.print(int(colours[colour_index][0]/(bkbrightness)));    
-      Serial.println();
-    #endif
-    
     move_bar();
-    last_check = millis();
   }
 
   checkSerial();
   checkI2C();
-   
+
+  // If rc_init_state changes, then save settings to eeprom
+  if (rc_init_state != digitalRead(RC_PIN)) {
+    if ((millis() - rc_init_debounce) > debounceDelay) {
+      saveSettings();
+      rc_init_state = digitalRead(RC_PIN);
+      rc_init_debounce = millis();
+    }
+  }
 }
 
