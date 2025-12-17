@@ -16,6 +16,7 @@
 * [Setting Up (Platform IO)](advanced/environment-platformio.md)
 * [Changing Colors](advanced/colours.md)
 * [Interfacing](advanced/interfacing.md)
+* [Commands](advanced/commands.md)
 * [Precompiled](advanced/precompiled.md)
 
 ## Troubleshooting
