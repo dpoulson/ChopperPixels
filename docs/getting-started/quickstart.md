@@ -36,6 +36,10 @@ This enables/disables the trim pots. When you put a jumper on these pins, the tr
 
 To set the default boot setting before sending the commands, use the trim pots without the jumper in place, and then once set to your liking, place the jumper on the pins whilst the board is still powered. 
 
+{% hint style="warning" %}
+The kits are shipped with the jumper in place so it doesn't get lost, so when you first power them up the trim pots will have no effect. Remove the jumper and keep it safe incase you want to do some fancy stuff later.
+{% endhint %}
+
 # First Power
 
 For testing, simply plug the ESP32 board into any USB socket. If powering from the screw terminals make sure it is a clean 5V supply. (ie, don't use a bunch of AA batteries to 'approximate' 5V)

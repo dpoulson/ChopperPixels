@@ -5,6 +5,14 @@
 #include <Wire.h>
 #include <EEPROM.h>
 
+#include "effects/effects.h"
+#include "effects/LarsonScanner.h" 
+#include "effects/Random.h"
+#include "effects/VuMeter.h"
+#include "effects/CenterOutVuMeter.h"
+
+#include "Comms.h"
+
 #define DEBUG 0
 
 const int I2C_ADDR = 0x08;
@@ -31,108 +39,161 @@ const uint16_t colours[3][3] = {
   {0,0,255}  // Blue
 };
 
+enum EffectID {
+  EFFECT_LARSON_SCANNER = 0,
+  EFFECT_VU_METER = 1,
+  EFFECT_CENTER_OUT_VU_METER = 2,
+  EFFECT_RANDOM = 3,
+  TOTAL_EFFECTS = 4 // Helper for counting
+};
+
 int speed = DEFAULT_SPEED;
 int brightness = 40;
 float bkbrightness = 5;
 int colour_index = 0;
-int scannerpos = HEIGHT-LARSON_HEIGHT;
-int scannerdir = 1;
+int effect = 0;
+
 long int last_loop = 0;
 bool rc_init_state = false;
 static unsigned long rc_init_debounce = 0;
 const unsigned int debounceDelay = 200; // Debounce delay in milliseconds
-
-
-volatile bool i2cCommandReady = false;
-int serialBufferIndex = 0;
-const int MAX_COMMAND_LENGTH = 32;
-char CommandBuffer[MAX_COMMAND_LENGTH];
 
 struct Settings {
   int speed;
   int brightness;
   float bkbrightness;
   int colour_index;
+  int effect;
 };
 
 Settings currentSettings;
+Effect* currentEffect = nullptr; // Pointer to the currently running effect
+unsigned long last_update_time = 0;
 
 #define EEPROM_SIZE sizeof(Settings) 
 
+void saveSettings() {
+  Serial.println("Saving settings....");
+  currentSettings.speed = speed;
+  currentSettings.brightness = brightness;
+  currentSettings.bkbrightness = bkbrightness;
+  currentSettings.colour_index = colour_index;
+  currentSettings.effect = effect;
+  
+  // 2. Write the entire struct to address 0
+  EEPROM.put(0, currentSettings); 
+  EEPROM.commit();
 
-void receiveEvent(int byteCount) {
-  // Read all incoming bytes into the buffer
-  int i = 0;
-  while (Wire.available() && i < sizeof(CommandBuffer) - 1) {
-    CommandBuffer[i++] = Wire.read();
-  }
-  CommandBuffer[i] = '\0'; // Null-terminate the string
+  Serial.print("Speed: ");
+  Serial.print(speed);
 
-  i2cCommandReady = true; // Set flag
+  Serial.print(" brightness: ");
+  Serial.print(brightness);
+
+  Serial.print(" bkbrightness: ");
+  Serial.print(bkbrightness);
+  
+  Serial.print(" colour_index: ");
+  Serial.print(colour_index);
+
+  Serial.print(" effect: ");
+  Serial.print(effect);
+
+  Serial.println("....Done");
 }
 
-void parseAndExecute(char buffer[MAX_COMMAND_LENGTH]) {
+void switchEffect(int newEffectID) {
+    if (newEffectID < 0 || newEffectID >= TOTAL_EFFECTS) {
+        Serial.print("Error: Invalid effect ID ");
+        Serial.println(newEffectID);
+        return;
+    }
+
+    // 1. Teardown the current effect
+    if (currentEffect != nullptr) {
+        currentEffect->teardown(); // Call the effect's cleanup routine
+        delete currentEffect;       // Free the memory
+        currentEffect = nullptr;
+    }
+
+    // 2. Create the new effect based on the ID
+    Serial.print("Switching to effect ID: ");
+    Serial.println(newEffectID);
+    
+    // Pass matrix reference and pointers to global setting variables (speed, brightness, etc.)
+    switch (newEffectID) {
+        case EFFECT_LARSON_SCANNER:
+            currentEffect = new LarsonScanner(
+                matrix, HEIGHT, LARSON_HEIGHT, colours, &speed, &brightness, &bkbrightness, &colour_index
+            );
+            break;
+
+        case EFFECT_VU_METER:
+            currentEffect = new VuMeter(
+                matrix, HEIGHT, LARSON_HEIGHT, colours, &speed, &brightness, &bkbrightness, &colour_index
+            );
+            break;
+
+        case EFFECT_CENTER_OUT_VU_METER:
+            currentEffect = new CenterOutVuMeter(
+                matrix, HEIGHT, LARSON_HEIGHT, colours, &speed, &brightness, &bkbrightness, &colour_index
+            );
+            break;
+
+        case EFFECT_RANDOM:
+            currentEffect = new Random(
+                matrix, HEIGHT, LARSON_HEIGHT, colours, &speed, &brightness, &bkbrightness, &colour_index
+            );
+            break;
+    }
+
+    // 3. Initialize the new effect
+    if (currentEffect != nullptr) {
+        currentEffect->setup();
+        // Reset the timer for the first update call
+        last_update_time = millis(); 
+        effect = newEffectID;
+    }
+}
+
+void parseAndExecute(char* buffer) {
   Serial.print("Command Buffer: ");
   Serial.println(buffer);
-}
-
-// This runs in the main loop
-void checkI2C() {
-  if (i2cCommandReady) {
-    parseAndExecute(CommandBuffer);
-
-    i2cCommandReady = false; // Reset flag
-  }
-}
-
-void checkSerial() {
-  if (Serial2.available() > 0) {
-    char incomingByte = Serial2.read();
-    if (incomingByte == '\n' || incomingByte == '\r') {
-      CommandBuffer[serialBufferIndex] = '\0';
-      if (serialBufferIndex > 0) {
-        Serial.print("Received Serial Command: ");
-        Serial.println(CommandBuffer);
-        parseAndExecute(CommandBuffer); 
+  
+  // Use strncmp to check for prefixes
+  if (strncmp(buffer, "EFF=", 4) == 0) {
+      // Command format: EFF=X (e.g., EFF=2)
+      int newEffectID = atoi(buffer + 4); // Convert the characters after "EFF=" to an integer
+      switchEffect(newEffectID);
+      
+  } else if (strncmp(buffer, "SPEED=", 6) == 0) {
+      // Command format: SPEED=X
+      int newSpeed = atoi(buffer + 6);
+      if (newSpeed >= 0 && newSpeed <= 100) {
+          speed = newSpeed;
+          Serial.print("Set Speed to: ");
+          Serial.println(speed);
       }
 
-      serialBufferIndex = 0;
-
-    } else {
-      if (serialBufferIndex < MAX_COMMAND_LENGTH - 1) {
-        CommandBuffer[serialBufferIndex] = incomingByte;
-        serialBufferIndex++;
-      } else {
-        Serial.println("Serial Command Too Long! Discarding...");
-        serialBufferIndex = 0;
+  } else if (strncmp(buffer, "COLOUR=", 4) == 0) {
+      // Command format: COLOUR=X
+      int newColour = atoi(buffer + 4);
+      if (newColour >= 0 && newColour <= 2) {
+          colour_index = newColour;
+          Serial.print("Set Colour to: ");
+          Serial.println(colour_index);
       }
-    }
+      
+  } else if (strcmp(buffer, "SAVE") == 0) {
+      // Command format: SAVE
+      saveSettings();
+      
+  } else {
+      Serial.println("Unknown Command.");
   }
 }
 
-void move_bar() {
-  matrix.setBrightness(brightness);
-  matrix.fillScreen(matrix.Color(
-      int(colours[colour_index][0]/(bkbrightness/10)), 
-      int(colours[colour_index][1]/(bkbrightness/10)), 
-      int(colours[colour_index][2]/(bkbrightness/10)))); // Clear Screen
-  matrix.drawRect(0,0,WIDTH,HEIGHT-LARSON_HEIGHT, matrix.Color(colours[colour_index][0],colours[colour_index][1],colours[colour_index][2]));      // Draw top light
-  matrix.drawRect(0, scannerpos, WIDTH,1, matrix.Color(colours[colour_index][0],colours[colour_index][1],colours[colour_index][2]) ); // Draw scanner line
-  matrix.show();
-  scannerpos = scannerpos + scannerdir;
-  
-  if (scannerpos >= HEIGHT) {
-    scannerpos = HEIGHT-2;
-    scannerdir = -1; 
-  }
-  if (scannerpos <= HEIGHT-LARSON_HEIGHT) {
-    scannerpos = HEIGHT-LARSON_HEIGHT;
-    scannerdir = 1; 
-  }
-
-  last_loop = millis();
-  
-}
+Comms comms(I2C_ADDR, parseAndExecute);
 
 void setup() {
 
@@ -154,6 +215,7 @@ void setup() {
     brightness = currentSettings.brightness;
     bkbrightness = currentSettings.bkbrightness;
     colour_index = currentSettings.colour_index;
+    effect = currentSettings.effect;
     rc_init_state = true;
   } else {
     speed = map(analogRead(25), 0, 4096, 100, 0);
@@ -171,35 +233,10 @@ void setup() {
   Serial.print("Colour Index: ");
   Serial.println(colour_index);
 
-  Wire.begin(I2C_ADDR); // Start as I2C Slave at address 0x08
-  Wire.onReceive(receiveEvent); // Register the interrupt handler function
+  comms.begin();
 
-}
+  switchEffect(effect);
 
-void saveSettings() {
-  Serial.println("Saving settings....");
-  currentSettings.speed = speed;
-  currentSettings.brightness = brightness;
-  currentSettings.bkbrightness = bkbrightness;
-  currentSettings.colour_index = colour_index;
-  
-  // 2. Write the entire struct to address 0
-  EEPROM.put(0, currentSettings); 
-  EEPROM.commit();
-
-  Serial.print("Speed: ");
-  Serial.print(speed);
-
-  Serial.print(" brightness: ");
-  Serial.print(brightness);
-
-  Serial.print(" bkbrightness: ");
-  Serial.print(bkbrightness);
-  
-  Serial.print(" colour_index: ");
-  Serial.print(colour_index);
-
-  Serial.println("....Done");
 }
 
 void loop() {
@@ -223,19 +260,21 @@ void loop() {
     Serial.println();
   #endif
 
-  // Main LED panel loop
-  if (millis() > last_loop + speed) {
-
-    if (digitalRead(RC_PIN) == LOW) { // RC PIN not jumpered, so read from trim pots
-      speed = map(analogRead(25), 0, 4096, 100, 0);
-      brightness = map(analogRead(26), 0, 4096, 100, 0);
-      bkbrightness = map(analogRead(27), 0, 4096, 100, 1);
-    }
-    move_bar();
+  if (currentEffect != nullptr) {
+      unsigned long now = millis();
+      unsigned long deltaTime = now - last_update_time;
+      currentEffect->update(deltaTime); // Update the effect
+      last_update_time = now;
   }
 
-  checkSerial();
-  checkI2C();
+  if (digitalRead(RC_PIN) == LOW) { // RC PIN not jumpered, so read from trim pots
+    speed = map(analogRead(25), 0, 4096, 100, 0);
+    brightness = map(analogRead(26), 0, 4096, 100, 0);
+    bkbrightness = map(analogRead(27), 0, 4096, 100, 1);
+  }
+
+  comms.checkSerial(); 
+  comms.checkI2C();
 
   // If rc_init_state changes, then save settings to eeprom
   if (rc_init_state != digitalRead(RC_PIN)) {
