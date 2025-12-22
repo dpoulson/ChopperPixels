@@ -8,7 +8,7 @@ Placing the RC jumper in place whilst running will save the current trim pot val
 
 Command structure is:
 
-<com>=<value>
+```<com>=<value>```
 
 This is still a Work In Progress. 
 
@@ -20,9 +20,9 @@ If anyone has ideas, let me know.
 
 Switch between different effects with: 
 
-EFFECT=<num>
+```EFFECT=<num>```
 
-where <num> is one of: 
+where ```<num>``` is one of: 
 
 * 0 - Larson Scanner (default)
 * 1 - VU Meter
@@ -34,13 +34,19 @@ where <num> is one of:
 
 Adjust the speed with:
 
-SPEED=<num>
+```SPEED=<num>```
 
-Where <num> is between 0 and 100. 
+Where ```<num>``` is between 0 and 100. This is the delay between each animation loop, so the lower the number the faster it is.
 
 ### Colour
 
-Set the colour index from 0 to 2 (Red, Green, Blue) with:
+Set the colour index from 0 to 6 (Red, Green, Blue) with:
 
-COLOUR=<num>
+```COLOUR=<num>```
+
+### Save
+
+You can save the settings to eeprom, so that if in RC mode they are restored when you power up again. 
+
+```SAVE```
 
