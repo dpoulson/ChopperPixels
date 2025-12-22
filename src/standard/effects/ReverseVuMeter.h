@@ -1,13 +1,13 @@
-#ifndef VUMETER_H
-#define VUMETER_H
+#ifndef REVERSE_VUMETER_H
+#define REVERSE_VUMETER_H
 
 #include "effects.h"
 #include <Adafruit_NeoMatrix.h>
 
-class VuMeter : public Effect {
+class ReverseVuMeter : public Effect {
 public:
     // Constructor
-    VuMeter(Adafruit_NeoMatrix& matrixRef, int height, int larsonHeight, const uint16_t (&colors)[NUM_COLOURS][3], int* speedPtr, int* brightnessPtr, float* bkbrightnessPtr, int* colorIndexPtr);
+    ReverseVuMeter(Adafruit_NeoMatrix& matrixRef, int height, int larsonHeight, const uint16_t (&colors)[NUM_COLOURS][3], int* speedPtr, int* brightnessPtr, float* bkbrightnessPtr, int* colorIndexPtr);
 
     // Implementation of the base class function
     void update(unsigned long deltaTime) override;
@@ -33,4 +33,4 @@ private:
     unsigned long last_update_time;
 };
 
-#endif // VUMETER_H
+#endif // REVERSE_VUMETER_H

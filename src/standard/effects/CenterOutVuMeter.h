@@ -7,7 +7,7 @@
 class CenterOutVuMeter : public Effect {
 public:
     // Constructor
-    CenterOutVuMeter(Adafruit_NeoMatrix& matrixRef, int height, int larsonHeight, const uint16_t (&colors)[3][3], int* speedPtr, int* brightnessPtr, float* bkbrightnessPtr, int* colorIndexPtr);
+    CenterOutVuMeter(Adafruit_NeoMatrix& matrixRef, int height, int larsonHeight, const uint16_t (&colors)[NUM_COLOURS][3], int* speedPtr, int* brightnessPtr, float* bkbrightnessPtr, int* colorIndexPtr);
 
     // Implementation of the base class function
     void update(unsigned long deltaTime) override;
@@ -22,7 +22,7 @@ private:
     int* colour_index;
 
     // Constants
-    const uint16_t (&coloursRef)[3][3];
+    const uint16_t (&coloursRef)[NUM_COLOURS][3];
     const int HEIGHT;
     const int LARSON_HEIGHT; 
     

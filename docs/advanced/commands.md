@@ -26,8 +26,9 @@ where <num> is one of:
 
 * 0 - Larson Scanner (default)
 * 1 - VU Meter
-* 2 - Center Out VU Meter
-* 3 - Random
+* 2 - Reverse VU Meter
+* 3 - Center Out VU Meter
+* 4 - Random
 
 ### Speed
 

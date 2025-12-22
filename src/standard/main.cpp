@@ -9,7 +9,9 @@
 #include "effects/LarsonScanner.h" 
 #include "effects/Random.h"
 #include "effects/VuMeter.h"
+#include "effects/ReverseVuMeter.h"
 #include "effects/CenterOutVuMeter.h"
+#include "effects/RainbowVuMeter.h"
 
 #include "Comms.h"
 
@@ -22,6 +24,7 @@ const int I2C_ADDR = 0x08;
 #define WIDTH 2            // Width of LED matrix
 #define HEIGHT 26          // Height of LED matrix
 #define LARSON_HEIGHT 25   // Number of rows for larson scanner
+#define PERI_LENGTH 1      // Define the length of the periscope LED string
 
 #define DEFAULT_SPEED 30
 
@@ -33,36 +36,51 @@ Adafruit_NeoMatrix matrix = Adafruit_NeoMatrix(WIDTH, HEIGHT, LADD_PIN,
   NEO_MATRIX_ROWS + NEO_MATRIX_ZIGZAG,
   NEO_GRB            + NEO_KHZ800);
 
-const uint16_t colours[3][3] = {
+Adafruit_NeoPixel Peri(PERI_LENGTH, PERI_PIN, NEO_GRB + NEO_KHZ800);
+
+#define NUM_COLOURS 6
+
+const uint16_t colours[NUM_COLOURS][3] = {
   {255,0,0}, // Red
   {0,255,0}, // Green
-  {0,0,255}  // Blue
+  {0,0,255},  // Blue
+  {255,255,0}, // Yellow
+  {255,0,255}, // Magenta
+  {0,255,255}, // Cyan
 };
 
 enum EffectID {
   EFFECT_LARSON_SCANNER = 0,
   EFFECT_VU_METER = 1,
-  EFFECT_CENTER_OUT_VU_METER = 2,
-  EFFECT_RANDOM = 3,
-  TOTAL_EFFECTS = 4 // Helper for counting
+  EFFECT_REVERSE_VU_METER = 2,
+  EFFECT_CENTER_OUT_VU_METER = 3,
+  EFFECT_RANDOM = 4,
+  EFFECT_RAINBOW_VU_METER=5,
+  TOTAL_EFFECTS = 6 // Helper for counting
 };
 
 int speed = DEFAULT_SPEED;
 int brightness = 40;
 float bkbrightness = 5;
 int colour_index = 0;
+int peri_colour_index = 2;
 int effect = 0;
 
 long int last_loop = 0;
 bool rc_init_state = false;
+int last_pt_pin_state = HIGH;         // Stores the last *known* stable state of the pin
+unsigned long pt_debounce = 0; // The last time the pin was checked/updated
 static unsigned long rc_init_debounce = 0;
 const unsigned int debounceDelay = 200; // Debounce delay in milliseconds
+
+bool pt_pin_triggered = false; 
 
 struct Settings {
   int speed;
   int brightness;
   float bkbrightness;
   int colour_index;
+  int peri_colour_index;
   int effect;
 };
 
@@ -78,6 +96,7 @@ void saveSettings() {
   currentSettings.brightness = brightness;
   currentSettings.bkbrightness = bkbrightness;
   currentSettings.colour_index = colour_index;
+  currentSettings.peri_colour_index = peri_colour_index;
   currentSettings.effect = effect;
   
   // 2. Write the entire struct to address 0
@@ -95,6 +114,9 @@ void saveSettings() {
   
   Serial.print(" colour_index: ");
   Serial.print(colour_index);
+
+  Serial.print(" peri_colour_index: ");
+  Serial.print(peri_colour_index);
 
   Serial.print(" effect: ");
   Serial.print(effect);
@@ -134,8 +156,20 @@ void switchEffect(int newEffectID) {
             );
             break;
 
+        case EFFECT_REVERSE_VU_METER:
+            currentEffect = new ReverseVuMeter(
+                matrix, HEIGHT, LARSON_HEIGHT, colours, &speed, &brightness, &bkbrightness, &colour_index
+            );
+            break;
+
         case EFFECT_CENTER_OUT_VU_METER:
             currentEffect = new CenterOutVuMeter(
+                matrix, HEIGHT, LARSON_HEIGHT, colours, &speed, &brightness, &bkbrightness, &colour_index
+            );
+            break;
+
+        case EFFECT_RAINBOW_VU_METER:
+            currentEffect = new RainbowVuMeter(
                 matrix, HEIGHT, LARSON_HEIGHT, colours, &speed, &brightness, &bkbrightness, &colour_index
             );
             break;
@@ -177,9 +211,9 @@ void parseAndExecute(char* buffer) {
 
   } else if (strncmp(buffer, "COLOUR=", 4) == 0) {
       // Command format: COLOUR=X
-      int newColour = atoi(buffer + 4);
-      if (newColour >= 0 && newColour <= 2) {
-          colour_index = newColour;
+      int newColour = atoi(buffer + 7);
+      if (newColour >= 1 && newColour <= NUM_COLOURS) {
+          colour_index = newColour - 1;
           Serial.print("Set Colour to: ");
           Serial.println(colour_index);
       }
@@ -198,12 +232,17 @@ Comms comms(I2C_ADDR, parseAndExecute);
 void setup() {
 
   matrix.begin();
+  Peri.begin();
+
   Serial.begin(115200);
   Serial.println("Booting.... ");
   Serial.println("Initialising EEPROM");
   EEPROM.begin(EEPROM_SIZE);
   pinMode(RC_PIN, INPUT_PULLUP);
+  pinMode(PT_PIN, INPUT_PULLDOWN);
+  last_pt_pin_state = digitalRead(PT_PIN);
   last_loop = millis();
+
   
   if (digitalRead(RC_PIN) == HIGH) { // RC Pin is jumpered, so read from EEPROM
     Serial.println("Loading defaults from EEPROM");
@@ -215,6 +254,7 @@ void setup() {
     brightness = currentSettings.brightness;
     bkbrightness = currentSettings.bkbrightness;
     colour_index = currentSettings.colour_index;
+    peri_colour_index = currentSettings.peri_colour_index;
     effect = currentSettings.effect;
     rc_init_state = true;
   } else {
@@ -284,5 +324,28 @@ void loop() {
       rc_init_debounce = millis();
     }
   }
+
+
+  int pt_read = digitalRead(PT_PIN);
+  if ((millis() - pt_debounce) > debounceDelay) {
+      if (pt_read != last_pt_pin_state) {
+          if (pt_read == HIGH) {
+            Serial.println("Periscope Triggered");
+            for (int pixel = 0; pixel < PERI_LENGTH; pixel++) {
+              Peri.setPixelColor(pixel, Peri.Color(255, 0, 0));  
+            }
+            Peri.show();
+          }
+          else if (pt_read == LOW) {
+            Peri.clear();
+            Peri.show();
+          }
+          last_pt_pin_state = pt_read; 
+      }
+
+      pt_debounce = millis();
+  }
+
+
 }
 

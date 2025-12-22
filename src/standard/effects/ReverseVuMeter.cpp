@@ -1,11 +1,11 @@
-#include "VuMeter.h"
+#include "ReverseVuMeter.h"
 
 // The maximum height the bar can fill, starting from the bottom of the matrix (HEIGHT-1)
 // up to just below the top filled line (HEIGHT - LARSON_HEIGHT)
 #define MAX_BAR_HEIGHT (LARSON_HEIGHT) 
 
 // Constructor (similar to LarsonScanner)
-VuMeter::VuMeter(Adafruit_NeoMatrix& matrixRef, int height, int larsonHeight, const uint16_t (&colors)[NUM_COLOURS][3], int* speedPtr, int* brightnessPtr, float* bkbrightnessPtr, int* colorIndexPtr)
+ReverseVuMeter::ReverseVuMeter(Adafruit_NeoMatrix& matrixRef, int height, int larsonHeight, const uint16_t (&colors)[NUM_COLOURS][3], int* speedPtr, int* brightnessPtr, float* bkbrightnessPtr, int* colorIndexPtr)
     : matrix(matrixRef),
       coloursRef(colors),
       HEIGHT(height),
@@ -20,7 +20,7 @@ VuMeter::VuMeter(Adafruit_NeoMatrix& matrixRef, int height, int larsonHeight, co
 {
 }
 
-void VuMeter::update(unsigned long deltaTime) {
+void ReverseVuMeter::update(unsigned long deltaTime) {
     // Control the update rate using the 'speed' setting
     if (millis() < last_update_time + *speed) {
         return; 

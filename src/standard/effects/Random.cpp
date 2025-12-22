@@ -1,7 +1,7 @@
 #include "Random.h"
 
 // Note: We use references/pointers to access the global variables for settings.
-Random::Random(Adafruit_NeoMatrix& matrixRef, int height, int larsonHeight, const uint16_t (&colors)[3][3], int* speedPtr, int* brightnessPtr, float* bkbrightnessPtr, int* colorIndexPtr)
+Random::Random(Adafruit_NeoMatrix& matrixRef, int height, int larsonHeight, const uint16_t (&colors)[NUM_COLOURS][3], int* speedPtr, int* brightnessPtr, float* bkbrightnessPtr, int* colorIndexPtr)
     : matrix(matrixRef), // Initialize the reference member
       coloursRef(colors), // Initialize the reference to the colors array
       HEIGHT(height),
@@ -50,12 +50,6 @@ void Random::update(unsigned long deltaTime) {
     // Draw scanner line
     int pos = random(HEIGHT - LARSON_HEIGHT, HEIGHT);
     matrix.drawRect(0, pos, WIDTH, 1, fgColor); 
-
-    Serial.print(HEIGHT - 2);
-    Serial.print(" ");
-    Serial.print(HEIGHT - LARSON_HEIGHT);
-    Serial.print(" "),
-    Serial.println(pos);
     
     matrix.show();
     

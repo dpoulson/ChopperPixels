@@ -1,7 +1,7 @@
 #include "CenterOutVuMeter.h"
 
 // Constructor
-CenterOutVuMeter::CenterOutVuMeter(Adafruit_NeoMatrix& matrixRef, int height, int larsonHeight, const uint16_t (&colors)[3][3], int* speedPtr, int* brightnessPtr, float* bkbrightnessPtr, int* colorIndexPtr)
+CenterOutVuMeter::CenterOutVuMeter(Adafruit_NeoMatrix& matrixRef, int height, int larsonHeight, const uint16_t (&colors)[NUM_COLOURS][3], int* speedPtr, int* brightnessPtr, float* bkbrightnessPtr, int* colorIndexPtr)
     : matrix(matrixRef),
       coloursRef(colors),
       HEIGHT(height),

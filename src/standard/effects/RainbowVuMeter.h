@@ -1,13 +1,13 @@
-#ifndef VUMETER_H
-#define VUMETER_H
+#ifndef RAINBOW_VUMETER_H
+#define RAINBOW_VUMETER_H
 
 #include "effects.h"
 #include <Adafruit_NeoMatrix.h>
 
-class VuMeter : public Effect {
+class RainbowVuMeter : public Effect {
 public:
     // Constructor
-    VuMeter(Adafruit_NeoMatrix& matrixRef, int height, int larsonHeight, const uint16_t (&colors)[NUM_COLOURS][3], int* speedPtr, int* brightnessPtr, float* bkbrightnessPtr, int* colorIndexPtr);
+    RainbowVuMeter(Adafruit_NeoMatrix& matrixRef, int height, int larsonHeight, const uint16_t (&colors)[NUM_COLOURS][3], int* speedPtr, int* brightnessPtr, float* bkbrightnessPtr, int* colorIndexPtr);
 
     // Implementation of the base class function
     void update(unsigned long deltaTime) override;
@@ -21,6 +21,8 @@ private:
     float* bkbrightness;
     int* colour_index;
 
+    uint16_t hueOffset;
+
     // Constants
     const uint16_t (&coloursRef)[NUM_COLOURS][3];
     const int HEIGHT;
@@ -33,4 +35,4 @@ private:
     unsigned long last_update_time;
 };
 
-#endif // VUMETER_H
+#endif // RAINBOW_VUMETER_H

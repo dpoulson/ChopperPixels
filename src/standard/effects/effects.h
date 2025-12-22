@@ -5,6 +5,8 @@
 #include <Adafruit_NeoPixel.h>
 #include <Adafruit_GFX.h>
 
+#define NUM_COLOURS 6
+
 // Forward declaration to avoid circular includes in more complex setups
 class Adafruit_NeoMatrix;
 

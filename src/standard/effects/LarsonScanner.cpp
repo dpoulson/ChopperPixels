@@ -1,7 +1,7 @@
 #include "LarsonScanner.h"
 
 // Note: We use references/pointers to access the global variables for settings.
-LarsonScanner::LarsonScanner(Adafruit_NeoMatrix& matrixRef, int height, int larsonHeight, const uint16_t (&colors)[3][3], int* speedPtr, int* brightnessPtr, float* bkbrightnessPtr, int* colorIndexPtr)
+LarsonScanner::LarsonScanner(Adafruit_NeoMatrix& matrixRef, int height, int larsonHeight, const uint16_t (&colors)[NUM_COLOURS][3], int* speedPtr, int* brightnessPtr, float* bkbrightnessPtr, int* colorIndexPtr)
     : matrix(matrixRef), // Initialize the reference member
       coloursRef(colors), // Initialize the reference to the colors array
       HEIGHT(height),
