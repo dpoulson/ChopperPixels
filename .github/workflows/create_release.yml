@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        environment: [standard] # <-- Add your environments here
+        environment: [standard, tlbx] # <-- Add your environments here
 
     steps:
       - name: Checkout repository

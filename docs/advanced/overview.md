@@ -15,8 +15,8 @@
         <tr><td>Periscope Trigger</td><td>32</td></tr>
         <tr><td>Remote Enable</td><td>35</td></tr>
         <tr><td>LADD (Ladder Light)</td><td>15</td></tr>
-        <tr><td>PERI (Perisope)</td><td>2</td></tr>
-        <tr><td>AUX1</td><td>4</td></tr>
+        <tr><td>PERI (Perisope)</td><td>13</td></tr>
+        <tr><td>EYES</td><td>4</td></tr>
         <tr><td>AUX2</td><td>5</td></tr>
         <tr><td>AUX3</td><td>18</td></tr>
         <tr><td>AUX4</td><td>19</td></tr>

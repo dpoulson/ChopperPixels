@@ -20,7 +20,7 @@ If anyone has ideas, let me know.
 
 Switch between different effects with: 
 
-```EFFECT=<num>```
+```EFF=<num>```
 
 where ```<num>``` is one of: 
 
@@ -29,6 +29,7 @@ where ```<num>``` is one of:
 * 2 - Reverse VU Meter
 * 3 - Center Out VU Meter
 * 4 - Random
+* 5 - Rainbow VU Meter
 
 ### Speed
 
@@ -43,6 +44,30 @@ Where ```<num>``` is between 0 and 100. This is the delay between each animation
 Set the colour index from 0 to 6 (Red, Green, Blue) with:
 
 ```COLOUR=<num>```
+
+### Periscope Colour
+
+Set the colour index from 0 to 6 (Red, Green, Blue) with:
+
+```PERI=<num>```
+
+### Eye Colour
+
+Set the colour index from 0 to 6 (Red, Green, Blue) with:
+
+```EYES=<num>```
+
+### Left Eye Colour
+
+Set the colour index from 0 to 6 (Red, Green, Blue) with:
+
+```LEYE=<num>```
+
+### Center Eye Colour
+
+Set the colour index from 0 to 6 (Red, Green, Blue) with:
+
+```CEYE=<num>```
 
 ### Save
 

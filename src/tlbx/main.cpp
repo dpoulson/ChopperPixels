@@ -5,6 +5,10 @@
 #include <Wire.h>
 #include <EEPROM.h>
 
+#include "ReelTwo.h"
+#include "dome/Logics.h"
+#include "dome/LogicEngineController.h"
+
 #include "effects/effects.h"
 #include "effects/LarsonScanner.h" 
 #include "effects/Random.h"
@@ -21,14 +25,12 @@ const int I2C_ADDR = 0x08;
 
 #define LADD_PIN 15        // Output pin for led board
 #define PERI_PIN 13        // Output pin for Periscope
-#define LEYE_PIN 4         // Output pin for left eye
-#define CEYE_PIN 5         // Output pin for right eye (center)
+#define EYES_PIN 4          // Output pin for eyes
 #define WIDTH 2            // Width of LED matrix
 #define HEIGHT 26          // Height of LED matrix
 #define LARSON_HEIGHT 25   // Number of rows for larson scanner
 #define PERI_LENGTH 1      // Define the length of the periscope LED string
-#define LEYE_LENGTH 7      // Length of string for eyes (default 2)
-#define CEYE_LENGTH 7
+#define EYES_LENGTH 2      // Length of string for eyes (default 2)
 
 #define DEFAULT_SPEED 30
 
@@ -41,8 +43,10 @@ Adafruit_NeoMatrix matrix = Adafruit_NeoMatrix(WIDTH, HEIGHT, LADD_PIN,
   NEO_GRB            + NEO_KHZ800);
 
 Adafruit_NeoPixel Peri(PERI_LENGTH, PERI_PIN, NEO_GRB + NEO_KHZ800);
-Adafruit_NeoPixel LEye(LEYE_LENGTH, LEYE_PIN, NEO_GRB + NEO_KHZ800);
-Adafruit_NeoPixel CEye(CEYE_LENGTH, CEYE_PIN, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel Eyes(EYES_LENGTH, EYES_PIN, NEO_GRB + NEO_KHZ800);
+
+AstroPixelFLD<4> FLD(LogicEngineFLDDefault, 1);
+AstroPixelFLDTLBX<5> RLD(LogicEngineFLDDefault, 1);
 
 #define NUM_COLOURS 6
 
@@ -70,8 +74,7 @@ int brightness = 40;
 float bkbrightness = 5;
 int colour_index = 0;
 int peri_colour_index = 2;
-int leye_colour_index = 2;
-int ceye_colour_index = 2;
+int eyes_colour_index = 2;
 int effect = 0;
 
 long int last_loop = 0;
@@ -90,8 +93,7 @@ struct Settings {
   int colour_index;
   int peri_colour_index;
   int effect;
-  int leye_colour_index;
-  int ceye_colour_index;
+  int eyes_colour_index;
 };
 
 Settings currentSettings;
@@ -108,8 +110,7 @@ void saveSettings() {
   currentSettings.colour_index = colour_index;
   currentSettings.peri_colour_index = peri_colour_index;
   currentSettings.effect = effect;
-  currentSettings.leye_colour_index = leye_colour_index;
-  currentSettings.ceye_colour_index = ceye_colour_index;
+  currentSettings.eyes_colour_index = eyes_colour_index;
   
   // 2. Write the entire struct to address 0
   EEPROM.put(0, currentSettings); 
@@ -133,11 +134,8 @@ void saveSettings() {
   Serial.print(" effect: ");
   Serial.print(effect);
 
-  Serial.print(" leye_colour_index: ");
-  Serial.print(leye_colour_index);
-
-  Serial.print(" ceye_colour_index: ");
-  Serial.print(ceye_colour_index);
+  Serial.print(" eyes_colour_index: ");
+  Serial.print(eyes_colour_index);
 
   Serial.println("....Done");
 }
@@ -240,29 +238,11 @@ void parseAndExecute(char* buffer) {
       // Command format: EYES=X
       int newColour = atoi(buffer + 5);
       if (newColour >= 1 && newColour <= NUM_COLOURS) {
-          leye_colour_index = newColour - 1;
-          ceye_colour_index = newColour - 1;
+          eyes_colour_index = newColour - 1;
           Serial.print("Set Colour to: ");
-          Serial.println(newColour - 1);
+          Serial.println(eyes_colour_index);
       }
   
-  } else if (strncmp(buffer, "LEYE=", 4) == 0) {
-      // Command format: LEYE=X
-      int newColour = atoi(buffer + 5);
-      if (newColour >= 1 && newColour <= NUM_COLOURS) {
-          leye_colour_index = newColour - 1;
-          Serial.print("Set Colour to: ");
-          Serial.println(newColour - 1);
-      }
-  } else if (strncmp(buffer, "CEYE=", 4) == 0) {
-      // Command format: CEYE=X
-      int newColour = atoi(buffer + 5);
-      if (newColour >= 1 && newColour <= NUM_COLOURS) {
-          ceye_colour_index = newColour - 1;
-          Serial.print("Set Colour to: ");
-          Serial.println(newColour - 1);
-      }
-      
   } else if (strncmp(buffer, "PERI=", 4) == 0) {
       // Command format: PERI=X
       int newColour = atoi(buffer + 5);
@@ -285,10 +265,11 @@ Comms comms(I2C_ADDR, parseAndExecute);
 
 void setup() {
 
+
+  REELTWO_READY();
+  RLD.selectScrollTextLeft("... TLBX ....", LogicEngineRenderer::kBlue, 0, 15);
   matrix.begin();
   Peri.begin();
-  LEye.begin();
-  CEye.begin();
 
   Serial.begin(115200);
   Serial.println("Booting.... ");
@@ -312,8 +293,7 @@ void setup() {
     colour_index = currentSettings.colour_index;
     peri_colour_index = currentSettings.peri_colour_index;
     effect = currentSettings.effect;
-    leye_colour_index = currentSettings.leye_colour_index;
-    ceye_colour_index = currentSettings.ceye_colour_index;
+    eyes_colour_index = currentSettings.eyes_colour_index;
     rc_init_state = true;
   } else {
     speed = map(analogRead(25), 0, 4096, 100, 0);
@@ -338,7 +318,7 @@ void setup() {
 }
 
 void loop() {
-
+  AnimatedEvent::process();
   //Serial.print("Peri Trigger: ");
   //Serial.println(digitalRead(PT_PIN));
 
