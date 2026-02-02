@@ -299,6 +299,18 @@ void setup() {
   last_pt_pin_state = digitalRead(PT_PIN);
   last_loop = millis();
 
+  // Quick and dirty set eye colour. 
+  for (int i = 0; i < LEYE_LENGTH; i++) {
+    LEye.setPixelColor(i, LEye.Color(0, 0, 255));
+  }
+  LEye.show();
+
+  for (int i = 0; i < CEYE_LENGTH; i++) {
+    CEye.setPixelColor(i, CEye.Color(0, 0, 255));
+  }
+  CEye.show();
+
+
   
   if (digitalRead(RC_PIN) == HIGH) { // RC Pin is jumpered, so read from EEPROM
     Serial.println("Loading defaults from EEPROM");
