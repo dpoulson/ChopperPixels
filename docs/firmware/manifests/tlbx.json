@@ -9,11 +9,11 @@
             "chipFamily": "ESP32",
             "parts": [
                 {
-                    "path": "../2lbx.bin/2lbx.bin",
+                    "path": "../tlbx.bin/tlbx.bin",
                     "offset": 0
                 }
             ]
         }
     ],
-    "manifest_name": "2lbx-manifest.json"
+    "manifest_name": "tlbx-manifest.json"
 }
