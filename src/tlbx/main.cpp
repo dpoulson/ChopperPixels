@@ -42,11 +42,20 @@ Adafruit_NeoMatrix matrix = Adafruit_NeoMatrix(WIDTH, HEIGHT, LADD_PIN,
   NEO_MATRIX_ROWS + NEO_MATRIX_ZIGZAG,
   NEO_GRB            + NEO_KHZ800);
 
+  static LogicEngineSettings LogicEngineCustom(
+    LogicEngineDefaults::FRONT_FADE,
+    255,
+    LogicEngineDefaults::FRONT_DELAY,
+    2,
+    LogicEngineDefaults::FRONT_BRI,
+    LogicEngineDefaults::sequence(LogicEngineDefaults::NORMAL));
+
+
 Adafruit_NeoPixel Peri(PERI_LENGTH, PERI_PIN, NEO_GRB + NEO_KHZ800);
 Adafruit_NeoPixel Eyes(EYES_LENGTH, EYES_PIN, NEO_GRB + NEO_KHZ800);
 
-AstroPixelFLD<4> FLD(LogicEngineFLDDefault, 1);
-AstroPixelFLDTLBX<5> RLD(LogicEngineFLDDefault, 1);
+AstroPixelFLD<4> FLD(LogicEngineCustom, 1);
+AstroPixelFLDTLBX<5> RLD(LogicEngineCustom, 1);
 
 #define NUM_COLOURS 6
 
