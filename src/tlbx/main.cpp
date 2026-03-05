@@ -44,9 +44,9 @@ Adafruit_NeoMatrix matrix = Adafruit_NeoMatrix(WIDTH, HEIGHT, LADD_PIN,
 
   static LogicEngineSettings LogicEngineCustom(
     LogicEngineDefaults::FRONT_FADE,
-    255,
-    LogicEngineDefaults::FRONT_DELAY,
-    2,
+    80, // hue
+    20,  // delay
+    0,  // pal
     LogicEngineDefaults::FRONT_BRI,
     LogicEngineDefaults::sequence(LogicEngineDefaults::NORMAL));
 
@@ -276,7 +276,7 @@ void setup() {
 
 
   REELTWO_READY();
-  RLD.selectScrollTextLeft("... TLBX ....", LogicEngineRenderer::kBlue, 0, 15);
+  RLD.selectScrollTextLeft("... TLBX ....", LogicEngineRenderer::kRed, 0, 15);
   matrix.begin();
   Peri.begin();
 
